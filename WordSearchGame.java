@@ -21,8 +21,25 @@ public class WordSearchGame extends JFrame {
     private final Color PURPLE_BG = new Color(200, 180, 220);
     private final Color PURPLE_DARK = new Color(120, 100, 140);
     private final Color PURPLE_LIGHT = new Color(220, 210, 240);
-    private final Color HIGHLIGHT_COLOR = new Color(230, 220, 120);
-    private final Color FOUND_COLOR = new Color(150, 200, 150);
+    private final Color HIGHLIGHT_COLOR = new Color(255, 255, 150);
+    
+    // สีสำหรับคำที่พบ - หลากหลายสี
+    private final Color[] WORD_COLORS = {
+        new Color(255, 200, 200),  // ชมพูอ่อน
+        new Color(200, 255, 200),  // เขียวอ่อน
+        new Color(200, 220, 255),  // ฟ้าอ่อน
+        new Color(255, 255, 180),  // เหลืองอ่อน
+        new Color(255, 220, 200),  // ส้มอ่อน
+        new Color(230, 200, 255),  // ม่วงอ่อน
+        new Color(200, 255, 255),  // เขียวน้ำทะเลอ่อน
+        new Color(255, 200, 255),  // ชมพูม่วง
+        new Color(220, 255, 220),  // เขียวมิ้นต์
+        new Color(255, 230, 200),  // พีช
+        new Color(200, 240, 255),  // ฟ้าน้ำทะเล
+        new Color(255, 210, 230),  // ชมพูโรส
+        new Color(230, 255, 200)   // เขียวมะนาว
+    };
+    private int currentColorIndex = 0;
     
     public WordSearchGame() {
         setTitle("Word Search Game");
@@ -234,10 +251,14 @@ public class WordSearchGame extends JFrame {
         if (foundWord != null) {
             foundWords.add(foundWord);
             
-            // ทำเครื่องหมายเซลล์ที่พบ
+            // เลือกสีสำหรับคำนี้
+            Color wordColor = WORD_COLORS[currentColorIndex % WORD_COLORS.length];
+            currentColorIndex++;
+            
+            // ทำเครื่องหมายเซลล์ที่พบด้วยสีที่แตกต่างกัน
             for (Point p : selectedCells) {
-                foundCellColors.put(p, FOUND_COLOR);
-                buttons[p.x][p.y].setBackground(FOUND_COLOR);
+                foundCellColors.put(p, wordColor);
+                buttons[p.x][p.y].setBackground(wordColor);
             }
             
             // ขีดฆ่าคำในรายการ
@@ -269,6 +290,7 @@ public class WordSearchGame extends JFrame {
     private void resetGame() {
         foundWords.clear();
         foundCellColors.clear();
+        currentColorIndex = 0;  // รีเซ็ต index สี
         
         // รีเซ็ตสีปุ่ม
         for (int row = 0; row < GRID_SIZE; row++) {
