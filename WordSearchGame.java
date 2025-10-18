@@ -15,8 +15,10 @@ public class WordSearchGame extends JFrame {
     private Point startCell = null;
     private Point endCell = null;
     private List<Point> selectedCells = new ArrayList<>();
-    private Map<Point, Color> foundCellColors = new HashMap<>();
+    private List<FoundWord> foundWordsList = new ArrayList<>();
     private JPanel wordPanel;
+    private JPanel gridPanel;
+    private JPanel highlightPanel;
     private Random random = new Random();
     
     // สีธีม
@@ -42,6 +44,17 @@ public class WordSearchGame extends JFrame {
         new Color(230, 255, 200)   // เขียวมะนาว
     };
     private int currentColorIndex = 0;
+    
+    // คลาสสำหรับเก็บข้อมูลคำที่พบ
+    private static class FoundWord {
+        List<Point> cells;
+        Color color;
+        
+        FoundWord(List<Point> cells, Color color) {
+            this.cells = new ArrayList<>(cells);
+            this.color = color;
+        }
+    }
     
     // ชุดคำทั้งหมดที่มีในตาราง - ธีมคำเกี่ยวกับธรรมชาติและสัตว์
     private final List<String> ALL_WORDS = Arrays.asList(
@@ -101,23 +114,99 @@ public class WordSearchGame extends JFrame {
     }
     
     private void createUI() {
+        // Panel หลักที่จะใช้ LayeredPane เพื่อวาด highlight ทับด้านบน
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(
+            GRID_SIZE * (CELL_SIZE + 2) + 20,
+            GRID_SIZE * (CELL_SIZE + 2) + 20
+        ));
+        
         // Panel สำหรับตาราง
-        JPanel gridPanel = new JPanel(new GridLayout(GRID_SIZE, GRID_SIZE, 2, 2));
+        gridPanel = new JPanel(new GridLayout(GRID_SIZE, GRID_SIZE, 2, 2));
         gridPanel.setBackground(PURPLE_DARK);
         gridPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        gridPanel.setBounds(0, 0, 
+            GRID_SIZE * (CELL_SIZE + 2) + 20,
+            GRID_SIZE * (CELL_SIZE + 2) + 20
+        );
         buttons = new JButton[GRID_SIZE][GRID_SIZE];
+        
+        // Panel สำหรับวาด highlight ทับด้านบน
+        JPanel highlightPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // วาด highlight สำหรับคำที่พบแล้ว
+                for (FoundWord fw : foundWordsList) {
+                    // ทำให้สีโปร่งใสนิดหน่อย
+                    Color transparentColor = new Color(fw.color.getRed(), fw.color.getGreen(), 
+                                                       fw.color.getBlue(), 180);
+                    g2d.setColor(transparentColor);
+                    g2d.setStroke(new BasicStroke(CELL_SIZE * 0.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    
+                    if (fw.cells.size() > 0) {
+                        Point first = fw.cells.get(0);
+                        Point last = fw.cells.get(fw.cells.size() - 1);
+                        
+                        // คำนวณตำแหน่งกลางเซลล์
+                        int x1 = first.y * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                        int y1 = first.x * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                        int x2 = last.y * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                        int y2 = last.x * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                        
+                        g2d.drawLine(x1, y1, x2, y2);
+                    }
+                }
+                
+                // วาด highlight สำหรับการเลือกปัจจุบัน
+                if (!selectedCells.isEmpty()) {
+                    // ทำให้สีโปร่งใสนิดหน่อย
+                    Color transparentHighlight = new Color(HIGHLIGHT_COLOR.getRed(), 
+                                                           HIGHLIGHT_COLOR.getGreen(), 
+                                                           HIGHLIGHT_COLOR.getBlue(), 180);
+                    g2d.setColor(transparentHighlight);
+                    g2d.setStroke(new BasicStroke(CELL_SIZE * 0.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    
+                    Point first = selectedCells.get(0);
+                    Point last = selectedCells.get(selectedCells.size() - 1);
+                    
+                    int x1 = first.y * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                    int y1 = first.x * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                    int x2 = last.y * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                    int y2 = last.x * (CELL_SIZE + 2) + CELL_SIZE / 2 + 10;
+                    
+                    g2d.drawLine(x1, y1, x2, y2);
+                }
+            }
+        };
+        highlightPanel.setOpaque(false);
+        highlightPanel.setBounds(0, 0,
+            GRID_SIZE * (CELL_SIZE + 2) + 20,
+            GRID_SIZE * (CELL_SIZE + 2) + 20
+        );
+        
+        // เพิ่ม panels เข้า layered pane
+        layeredPane.add(gridPanel, JLayeredPane.DEFAULT_LAYER);
+        layeredPane.add(highlightPanel, JLayeredPane.PALETTE_LAYER);
+        
+        // เก็บ reference ของ highlightPanel
+        this.highlightPanel = highlightPanel;
         
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int col = 0; col < GRID_SIZE; col++) {
                 JButton btn = new JButton(String.valueOf(grid[row][col]));
                 btn.setFont(new Font("Arial", Font.BOLD, 20));
                 btn.setPreferredSize(new Dimension(CELL_SIZE, CELL_SIZE));
-                btn.setBackground(Color.WHITE);
-                btn.setForeground(Color.BLACK);
+                btn.setBackground(PURPLE_LIGHT);
+                btn.setForeground(PURPLE_DARK);
                 btn.setFocusPainted(false);
-                btn.setBorder(BorderFactory.createLineBorder(PURPLE_DARK, 2));
+                btn.setBorder(BorderFactory.createLineBorder(PURPLE_BG, 1));
                 btn.setMargin(new Insets(0, 0, 0, 0));
                 btn.setOpaque(true);
+                btn.setContentAreaFilled(true);
                 
                 final int r = row;
                 final int c = col;
@@ -158,17 +247,12 @@ public class WordSearchGame extends JFrame {
         
         updateWordList();
         
-        add(gridPanel, BorderLayout.CENTER);
+        add(layeredPane, BorderLayout.CENTER);
         add(wordPanel, BorderLayout.EAST);
     }
     
     private void highlightSelection() {
-        // ล้างสีเดิม
-        for (Point p : selectedCells) {
-            if (!foundCellColors.containsKey(p)) {
-                buttons[p.x][p.y].setBackground(Color.WHITE);
-            }
-        }
+        // ไม่ต้องเปลี่ยนสีปุ่มแล้ว เพียงแค่ repaint highlightPanel
         selectedCells.clear();
         
         if (startCell == null || endCell == null) return;
@@ -207,13 +291,13 @@ public class WordSearchGame extends JFrame {
             for (int i = 0; i <= steps; i++) {
                 Point p = new Point(currentRow, currentCol);
                 selectedCells.add(p);
-                if (!foundCellColors.containsKey(p)) {
-                    buttons[currentRow][currentCol].setBackground(HIGHLIGHT_COLOR);
-                }
                 currentRow += rowStep;
                 currentCol += colStep;
             }
         }
+        
+        gridPanel.repaint();
+        highlightPanel.repaint();
     }
     
     private void checkWord() {
@@ -245,16 +329,16 @@ public class WordSearchGame extends JFrame {
             Color wordColor = WORD_COLORS[currentColorIndex % WORD_COLORS.length];
             currentColorIndex++;
             
-            // ทำเครื่องหมายเซลล์ที่พบด้วยสีที่แตกต่างกัน
-            for (Point p : selectedCells) {
-                foundCellColors.put(p, wordColor);
-                buttons[p.x][p.y].setBackground(wordColor);
-            }
+            // เพิ่มคำที่พบลงในลิสต์พร้อมสี
+            foundWordsList.add(new FoundWord(selectedCells, wordColor));
             
             // ขีดฆ่าคำในรายการ
             JLabel label = wordLabels.get(foundWord);
             label.setText("<html><strike>" + foundWord + "</strike></html>");
             label.setForeground(new Color(100, 150, 100));
+            
+            // Repaint เพื่อแสดง highlight
+            highlightPanel.repaint();
             
             // ตรวจสอบว่าชนะหรือยัง
             if (foundWords.size() == wordsToFind.size()) {
@@ -267,14 +351,10 @@ public class WordSearchGame extends JFrame {
     }
     
     private void clearSelection() {
-        for (Point p : selectedCells) {
-            if (!foundCellColors.containsKey(p)) {
-                buttons[p.x][p.y].setBackground(Color.WHITE);
-            }
-        }
         selectedCells.clear();
         startCell = null;
         endCell = null;
+        highlightPanel.repaint();
     }
     
     private void updateWordList() {
@@ -318,18 +398,14 @@ public class WordSearchGame extends JFrame {
         selectRandomWords();
         
         foundWords.clear();
-        foundCellColors.clear();
+        foundWordsList.clear();
         currentColorIndex = 0;  // รีเซ็ต index สี
-        
-        // รีเซ็ตสีปุ่ม
-        for (int row = 0; row < GRID_SIZE; row++) {
-            for (int col = 0; col < GRID_SIZE; col++) {
-                buttons[row][col].setBackground(Color.WHITE);
-            }
-        }
         
         // อัพเดทรายการคำใหม่
         updateWordList();
+        
+        // Repaint ตาราง
+        highlightPanel.repaint();
     }
     
     public static void main(String[] args) {
