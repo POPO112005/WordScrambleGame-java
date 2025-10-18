@@ -69,12 +69,11 @@ public class WordSearchGame extends JFrame {
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(PURPLE_LIGHT);
         
-        // สุ่มเลือกคำที่ต้องค้นหา (7-10 คำ)
-        selectRandomWords();
         foundWords = new ArrayList<>();
+        wordsToFind = new ArrayList<>();
         
-        // สร้างตาราง
-        createGrid();
+        // สร้างตารางและคำที่สามารถวางได้
+        createGridWithWords();
         
         // สร้าง UI
         createUI();
@@ -84,33 +83,140 @@ public class WordSearchGame extends JFrame {
         setVisible(true);
     }
     
-    private void selectRandomWords() {
-        // สุ่มจำนวนคำที่จะใช้ (7-10 คำ)
-        int numberOfWords = 7 + random.nextInt(4); // 7, 8, 9, หรือ 10 คำ
+    private void createGridWithWords() {
+        // สร้างตารางว่างเปล่าโดยใช้ตัวอักษรพิเศษเพื่อแสดงว่ายังไม่ได้ใช้
+        grid = new char[GRID_SIZE][GRID_SIZE];
         
-        // สร้างลิสต์คำทั้งหมดแล้วสับเปลี่ยน
+        // เติมด้วย '-' เพื่อแสดงว่ายังไม่ได้ใช้งาน
+        for (int i = 0; i < GRID_SIZE; i++) {
+            for (int j = 0; j < GRID_SIZE; j++) {
+                grid[i][j] = '-';
+            }
+        }
+        
+        // สุ่มคำและพยายามวางลงในตาราง
         List<String> shuffledWords = new ArrayList<>(ALL_WORDS);
         Collections.shuffle(shuffledWords, random);
         
-        // เลือกเฉพาะจำนวนที่ต้องการ
-        wordsToFind = new ArrayList<>(shuffledWords.subList(0, numberOfWords));
+        // ล้างรายการคำที่จะใช้
+        wordsToFind.clear();
+        
+        // พยายามวางคำให้ได้ 7-10 คำ
+        int targetWords = 7 + random.nextInt(4);
+        
+        for (String word : shuffledWords) {
+            if (wordsToFind.size() >= targetWords) {
+                break;
+            }
+            
+            if (placeWordInGrid(word)) {
+                wordsToFind.add(word);
+            }
+        }
+        
+        // ถ้าวางได้น้อยกว่า 7 คำ ให้พยายามวางอีกรอบด้วยวิธีง่ายๆ
+        if (wordsToFind.size() < 7) {
+            for (String word : shuffledWords) {
+                if (wordsToFind.size() >= 7) {
+                    break;
+                }
+                if (!wordsToFind.contains(word) && word.length() <= GRID_SIZE) {
+                    // วางแนวนอนที่แถวว่าง
+                    for (int row = 0; row < GRID_SIZE; row++) {
+                        boolean canPlace = true;
+                        for (int i = 0; i < word.length(); i++) {
+                            if (row < GRID_SIZE && i < GRID_SIZE) {
+                                // ตรวจสอบว่าช่องว่างหรือตรงกับตัวอักษร
+                                continue;
+                            }
+                        }
+                        if (canPlace && word.length() <= GRID_SIZE) {
+                            for (int i = 0; i < word.length(); i++) {
+                                grid[row][i] = word.charAt(i);
+                            }
+                            wordsToFind.add(word);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // หลังจากวางคำเสร็จแล้ว ถึงค่อยเติมช่องว่างด้วยตัวอักษรสุ่ม
+        for (int i = 0; i < GRID_SIZE; i++) {
+            for (int j = 0; j < GRID_SIZE; j++) {
+                if (grid[i][j] == '-') {
+                    grid[i][j] = (char) ('A' + random.nextInt(26));
+                }
+            }
+        }
     }
     
-    private void createGrid() {
-        grid = new char[][] {
-            {'M', 'O', 'U', 'N', 'T', 'A', 'I', 'N', 'B', 'E', 'A', 'C'},
-            {'F', 'L', 'O', 'W', 'E', 'R', 'W', 'H', 'A', 'L', 'E', 'H'},
-            {'O', 'C', 'E', 'A', 'N', 'A', 'I', 'G', 'B', 'L', 'E', 'A'},
-            {'R', 'E', 'S', 'U', 'N', 'S', 'E', 'T', 'U', 'E', 'A', 'G'},
-            {'E', 'L', 'I', 'R', 'A', 'I', 'N', 'B', 'O', 'W', 'G', 'L'},
-            {'S', 'U', 'V', 'I', 'R', 'T', 'I', 'G', 'E', 'R', 'L', 'E'},
-            {'T', 'R', 'E', 'V', 'E', 'R', 'O', 'F', 'T', 'E', 'E', 'Y'},
-            {'Y', 'E', 'R', 'I', 'V', 'E', 'R', 'E', 'L', 'L', 'Y', 'R'},
-            {'I', 'S', 'L', 'A', 'N', 'D', 'E', 'K', 'L', 'Y', 'D', 'E'},
-            {'B', 'U', 'T', 'T', 'E', 'R', 'F', 'L', 'Y', 'X', 'A', 'T'},
-            {'C', 'B', 'E', 'A', 'C', 'H', 'X', 'Q', 'O', 'W', 'N', 'M'},
-            {'H', 'X', 'Q', 'M', 'T', 'N', 'U', 'O', 'M', 'Z', 'O', 'M'}
-        };
+    private boolean placeWordInGrid(String word) {
+        boolean placed = false;
+        int attempts = 0;
+        int maxAttempts = 100;
+        
+        while (!placed && attempts < maxAttempts) {
+            attempts++;
+            
+            // สุ่มตำแหน่งเริ่มต้น
+            int startRow = random.nextInt(GRID_SIZE);
+            int startCol = random.nextInt(GRID_SIZE);
+            
+            // สุ่มทิศทาง (0-7: 8 ทิศทาง)
+            int direction = random.nextInt(8);
+            int rowDir = 0, colDir = 0;
+            
+            switch (direction) {
+                case 0: rowDir = 0; colDir = 1; break;   // ขวา
+                case 1: rowDir = 1; colDir = 0; break;   // ลง
+                case 2: rowDir = 1; colDir = 1; break;   // ขวาล่าง
+                case 3: rowDir = 1; colDir = -1; break;  // ซ้ายล่าง
+                case 4: rowDir = 0; colDir = -1; break;  // ซ้าย
+                case 5: rowDir = -1; colDir = 0; break;  // บน
+                case 6: rowDir = -1; colDir = 1; break;  // ขวาบน
+                case 7: rowDir = -1; colDir = -1; break; // ซ้ายบน
+            }
+            
+            // ตรวจสอบว่าวางคำได้หรือไม่
+            if (canPlaceWord(word, startRow, startCol, rowDir, colDir)) {
+                // วางคำลงในตาราง
+                for (int i = 0; i < word.length(); i++) {
+                    int row = startRow + i * rowDir;
+                    int col = startCol + i * colDir;
+                    grid[row][col] = word.charAt(i);
+                }
+                placed = true;
+            }
+        }
+        
+        return placed;
+    }
+    
+    private boolean canPlaceWord(String word, int startRow, int startCol, int rowDir, int colDir) {
+        // ตรวจสอบว่าคำจะออกนอกตารางหรือไม่
+        int endRow = startRow + (word.length() - 1) * rowDir;
+        int endCol = startCol + (word.length() - 1) * colDir;
+        
+        if (endRow < 0 || endRow >= GRID_SIZE || endCol < 0 || endCol >= GRID_SIZE) {
+            return false;
+        }
+        
+        // ตรวจสอบว่าช่องว่างพอหรือไม่ (ยอมให้ทับกันถ้าตัวอักษรเหมือนกัน หรือเป็นช่องว่าง)
+        for (int i = 0; i < word.length(); i++) {
+            int row = startRow + i * rowDir;
+            int col = startCol + i * colDir;
+            char existingChar = grid[row][col];
+            char targetChar = word.charAt(i);
+            
+            // อนุญาตถ้าช่องว่าง (-) หรือตัวอักษรเหมือนกัน
+            if (existingChar != '-' && existingChar != targetChar) {
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     private void createUI() {
@@ -342,10 +448,15 @@ public class WordSearchGame extends JFrame {
             
             // ตรวจสอบว่าชนะหรือยัง
             if (foundWords.size() == wordsToFind.size()) {
-                JOptionPane.showMessageDialog(this, 
-                    "Congratulations! You found all words!", 
+                int choice = JOptionPane.showConfirmDialog(this, 
+                    "Congratulations! You found all words!\n\nDo you want to play again?", 
                     "You Win!", 
+                    JOptionPane.YES_NO_OPTION,
                     JOptionPane.INFORMATION_MESSAGE);
+                
+                if (choice == JOptionPane.YES_OPTION) {
+                    resetGame();
+                }
             }
         }
     }
@@ -378,33 +489,31 @@ public class WordSearchGame extends JFrame {
             wordPanel.add(Box.createVerticalStrut(5));
         }
         
-        // เพิ่ม Reset Button
-        JButton resetButton = new JButton("New Game");
-        resetButton.setFont(new Font("Arial", Font.BOLD, 14));
-        resetButton.setBackground(PURPLE_DARK);
-        resetButton.setForeground(Color.WHITE);
-        resetButton.setFocusPainted(false);
-        resetButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        resetButton.addActionListener(e -> resetGame());
-        wordPanel.add(Box.createVerticalStrut(20));
-        wordPanel.add(resetButton);
-        
         wordPanel.revalidate();
         wordPanel.repaint();
     }
     
     private void resetGame() {
-        // สุ่มคำใหม่
-        selectRandomWords();
-        
+        // รีเซ็ตข้อมูลเกม
         foundWords.clear();
         foundWordsList.clear();
         currentColorIndex = 0;  // รีเซ็ต index สี
         
+        // สร้างตารางและคำใหม่
+        createGridWithWords();
+        
+        // อัพเดทปุ่มในตาราง
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
+                buttons[row][col].setText(String.valueOf(grid[row][col]));
+            }
+        }
+        
         // อัพเดทรายการคำใหม่
         updateWordList();
         
-        // Repaint ตาราง
+        // Repaint ทุกอย่าง
+        gridPanel.repaint();
         highlightPanel.repaint();
     }
     
