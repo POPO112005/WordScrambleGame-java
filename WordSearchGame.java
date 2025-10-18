@@ -471,7 +471,7 @@ public class WordSearchGame extends JFrame {
     private void updateWordList() {
         wordPanel.removeAll();
         
-        JLabel titleLabel = new JLabel("Words to Find:");
+        JLabel titleLabel = new JLabel("Words to Find ");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(PURPLE_DARK);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
