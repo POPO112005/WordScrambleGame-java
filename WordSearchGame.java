@@ -16,6 +16,8 @@ public class WordSearchGame extends JFrame {
     private Point endCell = null;
     private List<Point> selectedCells = new ArrayList<>();
     private Map<Point, Color> foundCellColors = new HashMap<>();
+    private JPanel wordPanel;
+    private Random random = new Random();
     
     // สีธีม
     private final Color PURPLE_BG = new Color(200, 180, 220);
@@ -41,18 +43,21 @@ public class WordSearchGame extends JFrame {
     };
     private int currentColorIndex = 0;
     
+    // ชุดคำทั้งหมดที่มีในตาราง - ธีมคำเกี่ยวกับธรรมชาติและสัตว์
+    private final List<String> ALL_WORDS = Arrays.asList(
+        "OCEAN", "MOUNTAIN", "FOREST", "RIVER", "FLOWER",
+        "BUTTERFLY", "EAGLE", "WHALE", "TIGER", "RAINBOW",
+        "SUNSET", "BEACH", "ISLAND"
+    );
+    
     public WordSearchGame() {
         setTitle("Word Search Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(PURPLE_LIGHT);
         
-        // กำหนดคำที่ต้องค้นหา (ตามรูป)
-        wordsToFind = Arrays.asList(
-            "CASTLE", "CURSE", "DARK", "DRAGON", "DREAM",
-            "ENCHANT", "KING", "KNIGHT", "MAGIC", "SPELL",
-            "STORY", "TALE", "WIZARD"
-        );
+        // สุ่มเลือกคำที่ต้องค้นหา (7-10 คำ)
+        selectRandomWords();
         foundWords = new ArrayList<>();
         
         // สร้างตาราง
@@ -66,20 +71,32 @@ public class WordSearchGame extends JFrame {
         setVisible(true);
     }
     
+    private void selectRandomWords() {
+        // สุ่มจำนวนคำที่จะใช้ (7-10 คำ)
+        int numberOfWords = 7 + random.nextInt(4); // 7, 8, 9, หรือ 10 คำ
+        
+        // สร้างลิสต์คำทั้งหมดแล้วสับเปลี่ยน
+        List<String> shuffledWords = new ArrayList<>(ALL_WORDS);
+        Collections.shuffle(shuffledWords, random);
+        
+        // เลือกเฉพาะจำนวนที่ต้องการ
+        wordsToFind = new ArrayList<>(shuffledWords.subList(0, numberOfWords));
+    }
+    
     private void createGrid() {
         grid = new char[][] {
-            {'T', 'Q', 'E', 'S', 'R', 'U', 'C', 'L', 'L', 'E', 'P', 'S'},
-            {'D', 'D', 'R', 'A', 'G', 'O', 'N', 'E', 'K', 'R', 'A', 'D'},
-            {'C', 'R', 'K', 'Q', 'R', 'M', 'R', 'W', 'U', 'Z', 'F', 'L'},
-            {'B', 'E', 'S', 'V', 'T', 'E', 'K', 'A', 'Q', 'H', 'V', 'Y'},
-            {'L', 'A', 'T', 'C', 'K', 'T', 'D', 'R', 'A', 'Z', 'I', 'W'},
-            {'F', 'M', 'O', 'I', 'I', 'X', 'T', 'N', 'G', 'Q', 'C', 'T'},
-            {'T', 'V', 'R', 'G', 'N', 'N', 'H', 'E', 'O', 'S', 'A', 'L'},
-            {'A', 'J', 'Y', 'A', 'G', 'U', 'G', 'Q', 'X', 'W', 'S', 'Y'},
-            {'C', 'S', 'H', 'M', 'E', 'I', 'I', 'H', 'X', 'M', 'T', 'E'},
-            {'L', 'T', 'N', 'A', 'H', 'C', 'N', 'E', 'H', 'J', 'L', 'F'},
-            {'Z', 'Q', 'O', 'X', 'O', 'B', 'K', 'F', 'A', 'A', 'E', 'K'},
-            {'B', 'D', 'X', 'C', 'X', 'Q', 'K', 'U', 'T', 'R', 'K', 'A'}
+            {'M', 'O', 'U', 'N', 'T', 'A', 'I', 'N', 'B', 'E', 'A', 'C'},
+            {'F', 'L', 'O', 'W', 'E', 'R', 'W', 'H', 'A', 'L', 'E', 'H'},
+            {'O', 'C', 'E', 'A', 'N', 'A', 'I', 'G', 'B', 'L', 'E', 'A'},
+            {'R', 'E', 'S', 'U', 'N', 'S', 'E', 'T', 'U', 'E', 'A', 'G'},
+            {'E', 'L', 'I', 'R', 'A', 'I', 'N', 'B', 'O', 'W', 'G', 'L'},
+            {'S', 'U', 'V', 'I', 'R', 'T', 'I', 'G', 'E', 'R', 'L', 'E'},
+            {'T', 'R', 'E', 'V', 'E', 'S', 'E', 'R', 'O', 'F', 'E', 'Y'},
+            {'Y', 'E', 'R', 'I', 'V', 'G', 'V', 'E', 'L', 'L', 'Y', 'R'},
+            {'I', 'S', 'L', 'A', 'N', 'D', 'E', 'K', 'L', 'Y', 'D', 'E'},
+            {'B', 'U', 'T', 'T', 'E', 'R', 'F', 'L', 'Y', 'X', 'A', 'T'},
+            {'C', 'B', 'E', 'A', 'C', 'H', 'X', 'Q', 'O', 'W', 'N', 'M'},
+            {'H', 'X', 'Q', 'M', 'T', 'N', 'U', 'O', 'M', 'Z', 'O', 'M'}
         };
     }
     
@@ -134,39 +151,12 @@ public class WordSearchGame extends JFrame {
         }
         
         // Panel สำหรับรายการคำ
-        JPanel wordPanel = new JPanel();
+        wordPanel = new JPanel();
         wordPanel.setLayout(new BoxLayout(wordPanel, BoxLayout.Y_AXIS));
         wordPanel.setBackground(PURPLE_LIGHT);
         wordPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        JLabel titleLabel = new JLabel("Words to Find:");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setForeground(PURPLE_DARK);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wordPanel.add(titleLabel);
-        wordPanel.add(Box.createVerticalStrut(10));
-        
-        wordLabels = new HashMap<>();
-        for (String word : wordsToFind) {
-            JLabel label = new JLabel(word);
-            label.setFont(new Font("Arial", Font.PLAIN, 16));
-            label.setForeground(PURPLE_DARK);
-            label.setAlignmentX(Component.LEFT_ALIGNMENT);
-            wordLabels.put(word, label);
-            wordPanel.add(label);
-            wordPanel.add(Box.createVerticalStrut(5));
-        }
-        
-        // เพิ่ม Reset Button
-        JButton resetButton = new JButton("New Game");
-        resetButton.setFont(new Font("Arial", Font.BOLD, 14));
-        resetButton.setBackground(PURPLE_DARK);
-        resetButton.setForeground(Color.WHITE);
-        resetButton.setFocusPainted(false);
-        resetButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        resetButton.addActionListener(e -> resetGame());
-        wordPanel.add(Box.createVerticalStrut(20));
-        wordPanel.add(resetButton);
+        updateWordList();
         
         add(gridPanel, BorderLayout.CENTER);
         add(wordPanel, BorderLayout.EAST);
@@ -287,7 +277,46 @@ public class WordSearchGame extends JFrame {
         endCell = null;
     }
     
+    private void updateWordList() {
+        wordPanel.removeAll();
+        
+        JLabel titleLabel = new JLabel("Words to Find:");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setForeground(PURPLE_DARK);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wordPanel.add(titleLabel);
+        wordPanel.add(Box.createVerticalStrut(10));
+        
+        wordLabels = new HashMap<>();
+        for (String word : wordsToFind) {
+            JLabel label = new JLabel(word);
+            label.setFont(new Font("Arial", Font.PLAIN, 16));
+            label.setForeground(PURPLE_DARK);
+            label.setAlignmentX(Component.LEFT_ALIGNMENT);
+            wordLabels.put(word, label);
+            wordPanel.add(label);
+            wordPanel.add(Box.createVerticalStrut(5));
+        }
+        
+        // เพิ่ม Reset Button
+        JButton resetButton = new JButton("New Game");
+        resetButton.setFont(new Font("Arial", Font.BOLD, 14));
+        resetButton.setBackground(PURPLE_DARK);
+        resetButton.setForeground(Color.WHITE);
+        resetButton.setFocusPainted(false);
+        resetButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        resetButton.addActionListener(e -> resetGame());
+        wordPanel.add(Box.createVerticalStrut(20));
+        wordPanel.add(resetButton);
+        
+        wordPanel.revalidate();
+        wordPanel.repaint();
+    }
+    
     private void resetGame() {
+        // สุ่มคำใหม่
+        selectRandomWords();
+        
         foundWords.clear();
         foundCellColors.clear();
         currentColorIndex = 0;  // รีเซ็ต index สี
@@ -299,12 +328,8 @@ public class WordSearchGame extends JFrame {
             }
         }
         
-        // รีเซ็ตรายการคำ
-        for (String word : wordsToFind) {
-            JLabel label = wordLabels.get(word);
-            label.setText(word);
-            label.setForeground(PURPLE_DARK);
-        }
+        // อัพเดทรายการคำใหม่
+        updateWordList();
     }
     
     public static void main(String[] args) {
