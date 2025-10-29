@@ -6,7 +6,7 @@ import java.util.List;
 
 public class WordSearchGame extends JFrame {
     private static final int GRID_SIZE = 12;
-    private static final int CELL_SIZE = 50;
+    private static final int CELL_SIZE = 45; // ลดขนาดเล็กลงนิดหน่อยเพื่อให้พอดีกับหน้าจอ
     
     // Game state
     private char[][] grid;
@@ -102,6 +102,7 @@ public class WordSearchGame extends JFrame {
     public WordSearchGame() {
         setTitle("Word Search Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(true); // อนุญาตให้ปรับขนาดหน้าต่างได้
         
         foundWords = new ArrayList<>();
         wordsToFind = new ArrayList<>();
@@ -283,62 +284,87 @@ public class WordSearchGame extends JFrame {
     }
     
     private void createGridWithWords() {
-        // สร้างตารางว่างเปล่าโดยใช้ตัวอักษรพิเศษเพื่อแสดงว่ายังไม่ได้ใช้
-        grid = new char[GRID_SIZE][GRID_SIZE];
-        
-        // เติมด้วย '-' เพื่อแสดงว่ายังไม่ได้ใช้งาน
-        for (int i = 0; i < GRID_SIZE; i++) {
-            for (int j = 0; j < GRID_SIZE; j++) {
-                grid[i][j] = '-';
-            }
-        }
-        
-        // สุ่มคำและพยายามวางลงในตาราง
-        List<String> shuffledWords = new ArrayList<>(ALL_WORDS);
-        Collections.shuffle(shuffledWords, random);
-        
-        // ล้างรายการคำที่จะใช้
-        wordsToFind.clear();
-        
-        // จำนวนคำขึ้นอยู่กับระดับความยาก
+        int maxRetries = 50; // เพิ่มจำนวนครั้งในการลองใหม่
+        int retryCount = 0;
         int targetWords = currentDifficulty != null ? currentDifficulty.wordCount : 10;
+        boolean success = false;
         
-        for (String word : shuffledWords) {
-            if (wordsToFind.size() >= targetWords) {
-                break;
+        // พยายามสร้างตารางจนกว่าจะได้คำครบตามจำนวนที่ต้องการ
+        while (retryCount < maxRetries && !success) {
+            // สร้างตารางว่างเปล่าโดยใช้ตัวอักษรพิเศษเพื่อแสดงว่ายังไม่ได้ใช้
+            grid = new char[GRID_SIZE][GRID_SIZE];
+            
+            // เติมด้วย '-' เพื่อแสดงว่ายังไม่ได้ใช้งาน
+            for (int i = 0; i < GRID_SIZE; i++) {
+                for (int j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = '-';
+                }
             }
             
-            if (placeWordInGrid(word)) {
-                wordsToFind.add(word);
-            }
-        }
-        
-        // ถ้าวางได้น้อยกว่าเป้าหมาย ให้พยายามวางอีกรอบด้วยวิธีง่ายๆ
-        if (wordsToFind.size() < targetWords) {
+            // สุ่มคำและพยายามวางลงในตาราง
+            List<String> shuffledWords = new ArrayList<>(ALL_WORDS);
+            Collections.shuffle(shuffledWords, random);
+            
+            // ล้างรายการคำที่จะใช้
+            wordsToFind.clear();
+            
+            // ลำดับความสำคัญในการวาง: วางคำยาวก่อน
+            shuffledWords.sort((a, b) -> b.length() - a.length());
+            
+            // พยายามวางคำให้ได้ตามจำนวนเป้าหมาย - เพิ่มจำนวนครั้งที่พยายามวางแต่ละคำ
             for (String word : shuffledWords) {
                 if (wordsToFind.size() >= targetWords) {
                     break;
                 }
-                if (!wordsToFind.contains(word) && word.length() <= GRID_SIZE) {
-                    // วางแนวนอนที่แถวว่าง
-                    for (int row = 0; row < GRID_SIZE; row++) {
-                        boolean canPlace = true;
-                        for (int i = 0; i < word.length(); i++) {
-                            if (row < GRID_SIZE && i < GRID_SIZE) {
-                                // ตรวจสอบว่าช่องว่างหรือตรงกับตัวอักษร
-                                continue;
-                            }
-                        }
-                        if (canPlace && word.length() <= GRID_SIZE) {
-                            for (int i = 0; i < word.length(); i++) {
-                                grid[row][i] = word.charAt(i);
-                            }
+                
+                if (placeWordInGridWithRetry(word, 500)) { // เพิ่มเป็น 500 ครั้ง
+                    wordsToFind.add(word);
+                }
+            }
+            
+            // ถ้าวางได้น้อยกว่าเป้าหมาย ให้พยายามวางอีกรอบด้วยวิธีบังคับวาง
+            if (wordsToFind.size() < targetWords) {
+                // สุ่มใหม่เพื่อลองคำอื่น
+                Collections.shuffle(shuffledWords, random);
+                
+                for (String word : shuffledWords) {
+                    if (wordsToFind.size() >= targetWords) {
+                        break;
+                    }
+                    if (!wordsToFind.contains(word) && word.length() <= GRID_SIZE) {
+                        // พยายามวางแนวนอนที่แถวว่าง
+                        if (forceHorizontalPlacement(word)) {
                             wordsToFind.add(word);
-                            break;
+                        } else if (forceVerticalPlacement(word)) {
+                            // ถ้าวางแนวนอนไม่ได้ ลองแนวตั้ง
+                            wordsToFind.add(word);
+                        } else if (forceDiagonalPlacement(word)) {
+                            // ถ้าวางแนวตั้งไม่ได้ ลองแนวทแยง
+                            wordsToFind.add(word);
                         }
                     }
                 }
             }
+            
+            // ถ้าวางได้ครบแล้ว ออกจาก loop
+            if (wordsToFind.size() >= targetWords) {
+                success = true;
+                System.out.println("✓ สร้างตารางสำเร็จ! วางคำได้ " + wordsToFind.size() + " คำ");
+                System.out.println("คำที่วาง: " + wordsToFind);
+                break;
+            }
+            
+            // ถ้าวางไม่ครบ ลองใหม่
+            retryCount++;
+            if (retryCount < maxRetries) {
+                System.out.println("พยายามครั้งที่ " + (retryCount + 1) + " - วางได้เพียง " + wordsToFind.size() + "/" + targetWords + " คำ");
+            }
+        }
+        
+        // ตรวจสอบว่าวางคำครบหรือไม่
+        if (!success) {
+            System.out.println("⚠ เตือน: วางคำได้เพียง " + wordsToFind.size() + " จาก " + targetWords + " คำที่ต้องการ");
+            System.out.println("คำที่วางได้: " + wordsToFind);
         }
         
         // หลังจากวางคำเสร็จแล้ว ถึงค่อยเติมช่องว่างด้วยตัวอักษรสุ่ม
@@ -349,6 +375,167 @@ public class WordSearchGame extends JFrame {
                 }
             }
         }
+    }
+    
+    // เมธอดสำหรับบังคับวางคำแนวนอนเมื่อวิธีปกติไม่ได้ผล
+    private boolean forceHorizontalPlacement(String word) {
+        // พยายามวางแนวนอนในแต่ละแถว
+        for (int row = 0; row < GRID_SIZE; row++) {
+            // ลองทุกตำแหน่งเริ่มต้นในแถว
+            for (int startCol = 0; startCol <= GRID_SIZE - word.length(); startCol++) {
+                boolean canPlace = true;
+                
+                // ตรวจสอบว่าวางได้หรือไม่
+                for (int i = 0; i < word.length(); i++) {
+                    char existingChar = grid[row][startCol + i];
+                    char targetChar = word.charAt(i);
+                    
+                    // อนุญาตถ้าช่องว่าง (-) หรือตัวอักษรเหมือนกัน
+                    if (existingChar != '-' && existingChar != targetChar) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                // ถ้าวางได้ ให้วางเลย
+                if (canPlace) {
+                    for (int i = 0; i < word.length(); i++) {
+                        grid[row][startCol + i] = word.charAt(i);
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    // เมธอดสำหรับบังคับวางคำแนวตั้ง
+    private boolean forceVerticalPlacement(String word) {
+        // พยายามวางแนวตั้งในแต่ละคอลัมน์
+        for (int col = 0; col < GRID_SIZE; col++) {
+            // ลองทุกตำแหน่งเริ่มต้นในคอลัมน์
+            for (int startRow = 0; startRow <= GRID_SIZE - word.length(); startRow++) {
+                boolean canPlace = true;
+                
+                // ตรวจสอบว่าวางได้หรือไม่
+                for (int i = 0; i < word.length(); i++) {
+                    char existingChar = grid[startRow + i][col];
+                    char targetChar = word.charAt(i);
+                    
+                    // อนุญาตถ้าช่องว่าง (-) หรือตัวอักษรเหมือนกัน
+                    if (existingChar != '-' && existingChar != targetChar) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                // ถ้าวางได้ ให้วางเลย
+                if (canPlace) {
+                    for (int i = 0; i < word.length(); i++) {
+                        grid[startRow + i][col] = word.charAt(i);
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    // เมธอดสำหรับบังคับวางคำแนวทแยง
+    private boolean forceDiagonalPlacement(String word) {
+        // ลองวางแนวทแยงทั้ง 4 ทิศทาง
+        int[][] directions = {
+            {1, 1},   // ขวาล่าง
+            {1, -1},  // ซ้ายล่าง
+            {-1, 1},  // ขวาบน
+            {-1, -1}  // ซ้ายบน
+        };
+        
+        for (int[] dir : directions) {
+            int rowDir = dir[0];
+            int colDir = dir[1];
+            
+            // ลองทุกตำแหน่งเริ่มต้นที่เป็นไปได้
+            for (int startRow = 0; startRow < GRID_SIZE; startRow++) {
+                for (int startCol = 0; startCol < GRID_SIZE; startCol++) {
+                    // คำนวณตำแหน่งสุดท้าย
+                    int endRow = startRow + (word.length() - 1) * rowDir;
+                    int endCol = startCol + (word.length() - 1) * colDir;
+                    
+                    // ตรวจสอบว่าอยู่ในขอบเขตหรือไม่
+                    if (endRow >= 0 && endRow < GRID_SIZE && endCol >= 0 && endCol < GRID_SIZE) {
+                        boolean canPlace = true;
+                        
+                        // ตรวจสอบว่าวางได้หรือไม่
+                        for (int i = 0; i < word.length(); i++) {
+                            int row = startRow + i * rowDir;
+                            int col = startCol + i * colDir;
+                            char existingChar = grid[row][col];
+                            char targetChar = word.charAt(i);
+                            
+                            // อนุญาตถ้าช่องว่าง (-) หรือตัวอักษรเหมือนกัน
+                            if (existingChar != '-' && existingChar != targetChar) {
+                                canPlace = false;
+                                break;
+                            }
+                        }
+                        
+                        // ถ้าวางได้ ให้วางเลย
+                        if (canPlace) {
+                            for (int i = 0; i < word.length(); i++) {
+                                int row = startRow + i * rowDir;
+                                int col = startCol + i * colDir;
+                                grid[row][col] = word.charAt(i);
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    // เมธอดใหม่สำหรับวางคำพร้อมการลองหลายครั้ง
+    private boolean placeWordInGridWithRetry(String word, int maxAttempts) {
+        boolean placed = false;
+        int attempts = 0;
+        
+        while (!placed && attempts < maxAttempts) {
+            attempts++;
+            
+            // สุ่มตำแหน่งเริ่มต้น
+            int startRow = random.nextInt(GRID_SIZE);
+            int startCol = random.nextInt(GRID_SIZE);
+            
+            // สุ่มทิศทาง (0-7: 8 ทิศทาง)
+            int direction = random.nextInt(8);
+            int rowDir = 0, colDir = 0;
+            
+            switch (direction) {
+                case 0: rowDir = 0; colDir = 1; break;   // ขวา
+                case 1: rowDir = 1; colDir = 0; break;   // ลง
+                case 2: rowDir = 1; colDir = 1; break;   // ขวาล่าง
+                case 3: rowDir = 1; colDir = -1; break;  // ซ้ายล่าง
+                case 4: rowDir = 0; colDir = -1; break;  // ซ้าย
+                case 5: rowDir = -1; colDir = 0; break;  // บน
+                case 6: rowDir = -1; colDir = 1; break;  // ขวาบน
+                case 7: rowDir = -1; colDir = -1; break; // ซ้ายบน
+            }
+            
+            // ตรวจสอบว่าวางคำได้หรือไม่
+            if (canPlaceWord(word, startRow, startCol, rowDir, colDir)) {
+                // วางคำลงในตาราง
+                for (int i = 0; i < word.length(); i++) {
+                    int row = startRow + i * rowDir;
+                    int col = startCol + i * colDir;
+                    grid[row][col] = word.charAt(i);
+                }
+                placed = true;
+            }
+        }
+        
+        return placed;
     }
     
     private boolean placeWordInGrid(String word) {
@@ -445,6 +632,10 @@ public class WordSearchGame extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(gamePanel, BorderLayout.CENTER);
         
+        // ตั้งขนาดหน้าต่างให้แน่ใจว่าเห็นตารางครบ 12x12
+        setPreferredSize(new Dimension(900, 750));
+        pack();
+        
         return mainPanel;
     }
     
@@ -539,7 +730,7 @@ public class WordSearchGame extends JFrame {
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int col = 0; col < GRID_SIZE; col++) {
                 JButton btn = new JButton(grid != null ? String.valueOf(grid[row][col]) : "");
-                btn.setFont(new Font("Arial", Font.BOLD, 20));
+                btn.setFont(new Font("Arial", Font.BOLD, 18)); // ลดขนาดฟอนต์จาก 20 เป็น 18
                 btn.setPreferredSize(new Dimension(CELL_SIZE, CELL_SIZE));
                 btn.setBackground(lightColor);
                 btn.setForeground(darkColor);
