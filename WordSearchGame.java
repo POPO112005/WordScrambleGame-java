@@ -145,14 +145,41 @@ public class WordSearchGame extends JFrame {
         nameField.setMaximumSize(new Dimension(300, 40));
         nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JButton startButton = new JButton("Start Game");
-        startButton.setFont(new Font("Arial", Font.BOLD, 20));
+        JButton startButton = new JButton("START GAME");
+        startButton.setFont(new Font("Arial", Font.BOLD, 28));
         startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        startButton.setBackground(new Color(100, 180, 100));
+        startButton.setBackground(new Color(46, 204, 113)); // สีเขียวสดใส
         startButton.setForeground(Color.WHITE);
         startButton.setFocusPainted(false);
-        startButton.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
-        startButton.setMaximumSize(new Dimension(200, 50));
+        startButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(39, 174, 96), 3),
+            BorderFactory.createEmptyBorder(20, 60, 20, 60)
+        ));
+        startButton.setMaximumSize(new Dimension(350, 80));
+        startButton.setPreferredSize(new Dimension(350, 80));
+        startButton.setOpaque(true);
+        startButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // เพิ่ม hover effect
+        startButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                startButton.setBackground(new Color(39, 174, 96)); // สีเข้มขึ้นเมื่อ hover
+                startButton.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(46, 204, 113), 3),
+                    BorderFactory.createEmptyBorder(20, 60, 20, 60)
+                ));
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                startButton.setBackground(new Color(46, 204, 113));
+                startButton.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(39, 174, 96), 3),
+                    BorderFactory.createEmptyBorder(20, 60, 20, 60)
+                ));
+            }
+        });
         
         startButton.addActionListener(e -> {
             playerName = nameField.getText().trim();
