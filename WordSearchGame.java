@@ -1020,7 +1020,7 @@ public class WordSearchGame extends JFrame {
         startAgainButton.setMaximumSize(new Dimension(200, 50));
         startAgainButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JButton endGameButton = new JButton("End Game");
+        JButton endGameButton = new JButton("Quit Game");
         endGameButton.setFont(new Font("Arial", Font.BOLD, 22));
         endGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         endGameButton.setBackground(Color.WHITE);
