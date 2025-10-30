@@ -28,6 +28,9 @@ public class WordSearchGame extends JFrame {
     private DifficultyLevel currentDifficulty = null;
     private DifficultyLevel nextDifficulty = null;
     
+    // Track used words across levels to avoid repetition
+    private Set<String> usedWordsInSession = new HashSet<>();
+    
     // Timer
     private javax.swing.Timer gameTimer;
     private int timeRemaining; // in seconds
@@ -329,17 +332,30 @@ public class WordSearchGame extends JFrame {
             }
             
             // สุ่มคำและพยายามวางลงในตาราง
-            List<String> shuffledWords = new ArrayList<>(ALL_WORDS);
-            Collections.shuffle(shuffledWords, random);
+            // กรองคำที่ยังไม่ได้ใช้ในเซสชันนี้ออกมา
+            List<String> availableWords = new ArrayList<>();
+            for (String word : ALL_WORDS) {
+                if (!usedWordsInSession.contains(word)) {
+                    availableWords.add(word);
+                }
+            }
+            
+            // ถ้าคำที่เหลือไม่พอ ให้รีเซ็ตคำที่ใช้แล้ว (เริ่มใหม่)
+            if (availableWords.size() < targetWords) {
+                usedWordsInSession.clear();
+                availableWords = new ArrayList<>(ALL_WORDS);
+            }
+            
+            Collections.shuffle(availableWords, random);
             
             // ล้างรายการคำที่จะใช้
             wordsToFind.clear();
             
             // ลำดับความสำคัญในการวาง: วางคำยาวก่อน
-            shuffledWords.sort((a, b) -> b.length() - a.length());
+            availableWords.sort((a, b) -> b.length() - a.length());
             
             // พยายามวางคำให้ได้ตามจำนวนเป้าหมาย - เพิ่มจำนวนครั้งที่พยายามวางแต่ละคำ
-            for (String word : shuffledWords) {
+            for (String word : availableWords) {
                 if (wordsToFind.size() >= targetWords) {
                     break;
                 }
@@ -352,9 +368,9 @@ public class WordSearchGame extends JFrame {
             // ถ้าวางได้น้อยกว่าเป้าหมาย ให้พยายามวางอีกรอบด้วยวิธีบังคับวาง
             if (wordsToFind.size() < targetWords) {
                 // สุ่มใหม่เพื่อลองคำอื่น
-                Collections.shuffle(shuffledWords, random);
+                Collections.shuffle(availableWords, random);
                 
-                for (String word : shuffledWords) {
+                for (String word : availableWords) {
                     if (wordsToFind.size() >= targetWords) {
                         break;
                     }
@@ -376,8 +392,13 @@ public class WordSearchGame extends JFrame {
             // ถ้าวางได้ครบแล้ว ออกจาก loop
             if (wordsToFind.size() >= targetWords) {
                 success = true;
+                
+                // บันทึกคำที่ใช้ไปแล้วในเซสชันนี้
+                usedWordsInSession.addAll(wordsToFind);
+                
                 System.out.println("✓ สร้างตารางสำเร็จ! วางคำได้ " + wordsToFind.size() + " คำ");
                 System.out.println("คำที่วาง: " + wordsToFind);
+                System.out.println("คำที่ใช้ไปแล้วทั้งหมด: " + usedWordsInSession);
                 break;
             }
             
@@ -981,30 +1002,51 @@ public class WordSearchGame extends JFrame {
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         messageLabel.setForeground(new Color(80, 80, 80));
         
-        JButton startAgainButton = new JButton("Start Again");
+        JLabel questionLabel = new JLabel("Would you like to start again or end the game?");
+        questionLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        questionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        questionLabel.setForeground(new Color(60, 60, 60));
+        
+        JButton startAgainButton = new JButton("Play Again");
         startAgainButton.setFont(new Font("Arial", Font.BOLD, 22));
         startAgainButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        startAgainButton.setBackground(new Color(100, 180, 255));
-        startAgainButton.setForeground(Color.WHITE);
+        startAgainButton.setBackground(Color.WHITE);
+        startAgainButton.setForeground(new Color(100, 180, 255)); // สีน้ำเงิน
         startAgainButton.setFocusPainted(false);
-        startAgainButton.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
+        startAgainButton.setOpaque(true);
+        startAgainButton.setBorderPainted(true);
+        startAgainButton.setBorder(BorderFactory.createLineBorder(new Color(100, 180, 255), 3));
+        startAgainButton.setPreferredSize(new Dimension(200, 50));
+        startAgainButton.setMaximumSize(new Dimension(200, 50));
         startAgainButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JButton quitButton = new JButton("Quit Game");
-        quitButton.setFont(new Font("Arial", Font.BOLD, 22));
-        quitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        quitButton.setBackground(new Color(220, 100, 100));
-        quitButton.setForeground(Color.WHITE);
-        quitButton.setFocusPainted(false);
-        quitButton.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
-        quitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton endGameButton = new JButton("End Game");
+        endGameButton.setFont(new Font("Arial", Font.BOLD, 22));
+        endGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        endGameButton.setBackground(Color.WHITE);
+        endGameButton.setForeground(new Color(220, 100, 100)); // สีแดง
+        endGameButton.setFocusPainted(false);
+        endGameButton.setOpaque(true);
+        endGameButton.setBorderPainted(true);
+        endGameButton.setBorder(BorderFactory.createLineBorder(new Color(220, 100, 100), 3));
+        endGameButton.setPreferredSize(new Dimension(200, 50));
+        endGameButton.setMaximumSize(new Dimension(200, 50));
+        endGameButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        startAgainButton.addActionListener(e -> {
-            cardLayout.show(mainContainer, OPTIONS_SCREEN);
+        startAgainButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // รีเซ็ตคำที่ใช้แล้วเพื่อเริ่มเกมใหม่
+                usedWordsInSession.clear();
+                cardLayout.show(mainContainer, OPTIONS_SCREEN);
+            }
         });
         
-        quitButton.addActionListener(e -> {
-            System.exit(0);
+        endGameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
         });
         
         panel.add(Box.createVerticalGlue());
@@ -1013,10 +1055,12 @@ public class WordSearchGame extends JFrame {
         panel.add(playerLabel);
         panel.add(Box.createVerticalStrut(30));
         panel.add(messageLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(questionLabel);
         panel.add(Box.createVerticalStrut(60));
         panel.add(startAgainButton);
         panel.add(Box.createVerticalStrut(20));
-        panel.add(quitButton);
+        panel.add(endGameButton);
         panel.add(Box.createVerticalGlue());
         
         return panel;
